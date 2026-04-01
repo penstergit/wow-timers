@@ -11,6 +11,7 @@ from collections.abc import Callable
 from datetime import datetime, timedelta, timezone
 from zoneinfo import ZoneInfo
 from pathlib import Path
+import discord
 import json
 
 MT = ZoneInfo("America/Denver")   # Mountain Time (BG weekends)
@@ -53,7 +54,7 @@ def load_config(path: str) -> dict:
         return {}
 
 
-async def send_pings(bot: object, config_path: str, make_message: Callable[[str], str]) -> None:
+async def send_pings(bot: discord.Client, config_path: str, make_message: Callable[[str], str]) -> None:
     """Send a message to every configured guild channel.
 
     make_message receives the role_id string and returns the message to send.

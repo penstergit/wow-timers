@@ -63,4 +63,4 @@ All commands require administrator permissions.
 | `/testdmf` | Darkmoon Faire | Send a test ping immediately |
 | `/teststv` | STV Fishing | Send a test ping immediately |
 
-Guild configs are stored in `data/bg-config.json`, `data/agm-config.json`, etc.
+Guild configs are stored in `python-bots/data/bg-config.json`, `python-bots/data/agm-config.json`, etc.
