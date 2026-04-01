@@ -155,6 +155,6 @@ async def testagm(
                         "Grab it fast — you have 5 minutes!"
                     )
         except Exception as e:
-                print(f"[WARN] Ping failed for guild {gid}: {e}")
+            print(f"[WARN] Ping failed for guild {gid}: {e}")
 	
 bot.run(TOKEN)
