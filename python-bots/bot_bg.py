@@ -16,8 +16,8 @@ from discord.ext import tasks
 from dotenv import load_dotenv
 
 from shared import (
-    format_countdown, find_image, load_config, save_guild_config,
-    get_rotation_info, rank_prefix,
+    format_countdown, find_image, save_guild_config,
+    get_rotation_info, rank_prefix, send_pings,
 )
 
 load_dotenv()
@@ -81,18 +81,7 @@ async def cmd_setup_bg(
 async def testbg(interaction: discord.Interaction):
     await interaction.response.defer(ephemeral=True)
     short = get_rotation_info()["currentBG"]["shortName"]
-    config = load_config(CONFIG_PATH)
-    for gid, cfg in config.items():
-        try:
-            guild = bot.get_guild(int(gid))
-            if guild:
-                ch = guild.get_channel(int(cfg["channelId"]))
-                if ch:
-                    await ch.send(
-                        f"<@&{cfg['roleId']}> 🏟️ **{short} Weekend** is now live!"
-                    )
-        except Exception as e:
-            print(f"[WARN] Ping failed for guild {gid}: {e}")
+    await send_pings(bot, CONFIG_PATH, lambda rid: f"<@&{rid}> 🏟️ **{short} Weekend** is now live!")
     await interaction.followup.send("✅ Test ping sent.", ephemeral=True)
 
 
@@ -131,19 +120,10 @@ async def do_update():
 
     # Role ping when weekend goes live
     if bot.was_active is False and info["isActive"]:
-        config = load_config(CONFIG_PATH)
-        for gid, cfg in config.items():
-            try:
-                guild = bot.get_guild(int(gid))
-                if guild:
-                    ch = guild.get_channel(int(cfg["channelId"]))
-                    if ch:
-                        await ch.send(
-                            f"<@&{cfg['roleId']}> 🏟️ **{short} Weekend** is now live! "
-                            f"Active for {format_countdown(info['msUntilEnd'])}."
-                        )
-            except Exception as e:
-                print(f"[WARN] Ping failed for guild {gid}: {e}")
+        await send_pings(bot, CONFIG_PATH, lambda rid:
+            f"<@&{rid}> 🏟️ **{short} Weekend** is now live! "
+            f"Active for {format_countdown(info['msUntilEnd'])}."
+        )
     bot.was_active = info["isActive"]
 
     # Status

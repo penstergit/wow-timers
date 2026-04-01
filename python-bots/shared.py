@@ -7,6 +7,7 @@ Shared utilities for all four WoW TBC Classic Anniversary Discord bots.
   - Misc helpers
 """
 from __future__ import annotations
+from collections.abc import Callable
 from datetime import datetime, timedelta, timezone
 from zoneinfo import ZoneInfo
 from pathlib import Path
@@ -50,6 +51,23 @@ def load_config(path: str) -> dict:
     except json.JSONDecodeError as e:
         print(f"[WARN] Could not parse config {path}: {e}")
         return {}
+
+
+async def send_pings(bot: object, config_path: str, make_message: Callable[[str], str]) -> None:
+    """Send a message to every configured guild channel.
+
+    make_message receives the role_id string and returns the message to send.
+    """
+    config = load_config(config_path)
+    for gid, cfg in config.items():
+        try:
+            guild = bot.get_guild(int(gid))
+            if guild:
+                ch = guild.get_channel(int(cfg["channelId"]))
+                if ch:
+                    await ch.send(make_message(cfg["roleId"]))
+        except Exception as e:
+            print(f"[WARN] Ping failed for guild {gid}: {e}")
 
 
 def save_guild_config(path: str, guild_id: int | str,

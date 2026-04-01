@@ -15,8 +15,8 @@ from discord.ext import tasks
 from dotenv import load_dotenv
 
 from shared import (
-    format_countdown, find_image, load_config, save_guild_config,
-    get_stv_state, rank_prefix,
+    format_countdown, find_image, save_guild_config,
+    get_stv_state, rank_prefix, send_pings,
 )
 
 load_dotenv()
@@ -73,19 +73,10 @@ async def cmd_setup_stv(
 @app_commands.default_permissions(administrator=True)
 async def teststv(interaction: discord.Interaction):
     await interaction.response.defer(ephemeral=True)
-    config = load_config(CONFIG_PATH)
-    for gid, cfg in config.items():
-        try:
-            guild = bot.get_guild(int(gid))
-            if guild:
-                ch = guild.get_channel(int(cfg["channelId"]))
-                if ch:
-                    await ch.send(
-                        f"<@&{cfg['roleId']}> 🎣 **STV Fishing Extravaganza** has started! "
-                        "Head to Stranglethorn Vale — you have 2 hours!"
-                    )
-        except Exception as e:
-            print(f"[WARN] Ping failed for guild {gid}: {e}")
+    await send_pings(bot, CONFIG_PATH, lambda rid:
+        f"<@&{rid}> 🎣 **STV Fishing Extravaganza** has started! "
+        "Head to Stranglethorn Vale — you have 2 hours!"
+    )
     await interaction.followup.send("✅ Test ping sent.", ephemeral=True)
 
 
@@ -120,19 +111,10 @@ async def do_update():
 
     # Role ping when tournament starts
     if bot.was_active is False and state["active"]:
-        config = load_config(CONFIG_PATH)
-        for gid, cfg in config.items():
-            try:
-                guild = bot.get_guild(int(gid))
-                if guild:
-                    ch = guild.get_channel(int(cfg["channelId"]))
-                    if ch:
-                        await ch.send(
-                            f"<@&{cfg['roleId']}> 🎣 **STV Fishing Extravaganza** has started! "
-                            "Head to Stranglethorn Vale — you have 2 hours!"
-                        )
-            except Exception as e:
-                print(f"[WARN] Ping failed for guild {gid}: {e}")
+        await send_pings(bot, CONFIG_PATH, lambda rid:
+            f"<@&{rid}> 🎣 **STV Fishing Extravaganza** has started! "
+            "Head to Stranglethorn Vale — you have 2 hours!"
+        )
     bot.was_active = state["active"]
 
     status = (

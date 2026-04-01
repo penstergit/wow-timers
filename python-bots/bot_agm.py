@@ -16,8 +16,8 @@ from discord.ext import tasks
 from dotenv import load_dotenv
 
 from shared import (
-    format_countdown, find_image, load_config, save_guild_config,
-    get_agm_state, rank_prefix,
+    format_countdown, find_image, save_guild_config,
+    get_agm_state, rank_prefix, send_pings,
 )
 
 load_dotenv()
@@ -100,19 +100,10 @@ async def do_update():
 
     # Role ping when chest just spawned
     if bot.was_up is False and state["isUp"]:
-        config = load_config(CONFIG_PATH)
-        for gid, cfg in config.items():
-            try:
-                guild = bot.get_guild(int(gid))
-                if guild:
-                    ch = guild.get_channel(int(cfg["channelId"]))
-                    if ch:
-                        await ch.send(
-                            f"<@&{cfg['roleId']}> ⚔️ **Arena Grand Master** chest has spawned! "
-                            "Grab it fast — you have 5 minutes!"
-                        )
-            except Exception as e:
-                print(f"[WARN] Ping failed for guild {gid}: {e}")
+        await send_pings(bot, CONFIG_PATH, lambda rid:
+            f"<@&{rid}> ⚔️ **Arena Grand Master** chest has spawned! "
+            "Grab it fast — you have 5 minutes!"
+        )
     bot.was_up = state["isUp"]
 
     status = "Chest is up!" if state["isUp"] else f"Next chest in {format_countdown(state['msUntilNext'])}"
@@ -138,19 +129,10 @@ async def do_update():
 @app_commands.default_permissions(administrator=True)
 async def testagm(interaction: discord.Interaction):
     await interaction.response.defer(ephemeral=True)
-    config = load_config(CONFIG_PATH)
-    for gid, cfg in config.items():
-        try:
-            guild = bot.get_guild(int(gid))
-            if guild:
-                ch = guild.get_channel(int(cfg["channelId"]))
-                if ch:
-                    await ch.send(
-                        f"<@&{cfg['roleId']}> ⚔️ **Arena Grand Master** chest has spawned! "
-                        "Grab it fast — you have 5 minutes!"
-                    )
-        except Exception as e:
-            print(f"[WARN] Ping failed for guild {gid}: {e}")
+    await send_pings(bot, CONFIG_PATH, lambda rid:
+        f"<@&{rid}> ⚔️ **Arena Grand Master** chest has spawned! "
+        "Grab it fast — you have 5 minutes!"
+    )
     await interaction.followup.send("✅ Test ping sent.", ephemeral=True)
 
 bot.run(TOKEN)
