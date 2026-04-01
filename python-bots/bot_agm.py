@@ -70,6 +70,8 @@ async def cmd_setup_agm(
     print(f"[AGM] /setupagm configured for '{interaction.guild.name}'")
 
 
+
+
 @tasks.loop(minutes=1)
 async def update_loop():
     await do_update()
@@ -133,5 +135,26 @@ async def do_update():
         except Exception as e:
             print(f"[WARN] Nickname failed in '{guild.name}': {e}")
 
-
+# 📢 Slash command to PING saved role
+@bot.tree.command(name="testagm", description="Ping the saved role in the saved channel")
+@app_commands.default_permissions(administrator=True)
+async def testagm(
+    interaction: discord.Interaction,
+    channel: discord.TextChannel,
+    role: discord.Role,
+):
+    config = load_config(CONFIG_PATH)
+    for gid, cfg in config.items():
+        try:
+            guild = bot.get_guild(int(gid))
+            if guild:
+                ch = guild.get_channel(int(cfg["channelId"]))
+                if ch:
+                    await ch.send(
+                        f"<@&{cfg['roleId']}> ⚔️ **Arena Grand Master** chest has spawned! "
+                        "Grab it fast — you have 5 minutes!"
+                    )
+        except Exception as e:
+                print(f"[WARN] Ping failed for guild {gid}: {e}")
+	
 bot.run(TOKEN)
