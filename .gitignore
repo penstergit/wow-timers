@@ -25,6 +25,11 @@ share/python-wheels/
 .installed.cfg
 *.egg
 .env
+python-bots/.env
+python-bots/logs/
+python-bots/.pid_*
+__pycache__/
+*.pyc
 MANIFEST
 
 # PyInstaller
