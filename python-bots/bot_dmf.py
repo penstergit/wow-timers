@@ -70,6 +70,26 @@ async def cmd_setup_dmf(
     print(f"[DMF] /setupdmf configured for '{interaction.guild.name}'")
 
 
+@bot.tree.command(name="testdmf", description="Ping the saved role in the saved channel")
+@app_commands.default_permissions(administrator=True)
+async def testdmf(interaction: discord.Interaction):
+    await interaction.response.defer(ephemeral=True)
+    config = load_config(CONFIG_PATH)
+    for gid, cfg in config.items():
+        try:
+            guild = bot.get_guild(int(gid))
+            if guild:
+                ch = guild.get_channel(int(cfg["channelId"]))
+                if ch:
+                    await ch.send(
+                        f"<@&{cfg['roleId']}> 🎪 **Darkmoon Faire** is now open! "
+                        "Head to Elwynn Forest or Mulgore."
+                    )
+        except Exception as e:
+            print(f"[WARN] Ping failed for guild {gid}: {e}")
+    await interaction.followup.send("✅ Test ping sent.", ephemeral=True)
+
+
 @tasks.loop(minutes=1)
 async def update_loop():
     await do_update()

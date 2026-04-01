@@ -42,13 +42,14 @@ def find_image(base_path: str) -> str | None:
 # ── Config ─────────────────────────────────────────────────────────────────
 
 def load_config(path: str) -> dict:
+    p = Path(path)
+    if not p.exists():
+        return {}
     try:
-        p = Path(path)
-        if p.exists():
-            return json.loads(p.read_text())
-    except Exception:
-        pass
-    return {}
+        return json.loads(p.read_text())
+    except json.JSONDecodeError as e:
+        print(f"[WARN] Could not parse config {path}: {e}")
+        return {}
 
 
 def save_guild_config(path: str, guild_id: int | str,

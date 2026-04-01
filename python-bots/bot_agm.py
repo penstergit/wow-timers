@@ -70,8 +70,6 @@ async def cmd_setup_agm(
     print(f"[AGM] /setupagm configured for '{interaction.guild.name}'")
 
 
-
-
 @tasks.loop(minutes=1)
 async def update_loop():
     await do_update()
@@ -138,11 +136,8 @@ async def do_update():
 # 📢 Slash command to PING saved role
 @bot.tree.command(name="testagm", description="Ping the saved role in the saved channel")
 @app_commands.default_permissions(administrator=True)
-async def testagm(
-    interaction: discord.Interaction,
-    channel: discord.TextChannel,
-    role: discord.Role,
-):
+async def testagm(interaction: discord.Interaction):
+    await interaction.response.defer(ephemeral=True)
     config = load_config(CONFIG_PATH)
     for gid, cfg in config.items():
         try:
@@ -156,5 +151,6 @@ async def testagm(
                     )
         except Exception as e:
             print(f"[WARN] Ping failed for guild {gid}: {e}")
-	
+    await interaction.followup.send("✅ Test ping sent.", ephemeral=True)
+
 bot.run(TOKEN)

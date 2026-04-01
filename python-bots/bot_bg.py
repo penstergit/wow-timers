@@ -76,6 +76,26 @@ async def cmd_setup_bg(
     print(f"[BG] /setupbg configured for '{interaction.guild.name}'")
 
 
+@bot.tree.command(name="testbg", description="Ping the saved role in the saved channel")
+@app_commands.default_permissions(administrator=True)
+async def testbg(interaction: discord.Interaction):
+    await interaction.response.defer(ephemeral=True)
+    short = get_rotation_info()["currentBG"]["shortName"]
+    config = load_config(CONFIG_PATH)
+    for gid, cfg in config.items():
+        try:
+            guild = bot.get_guild(int(gid))
+            if guild:
+                ch = guild.get_channel(int(cfg["channelId"]))
+                if ch:
+                    await ch.send(
+                        f"<@&{cfg['roleId']}> 🏟️ **{short} Weekend** is now live!"
+                    )
+        except Exception as e:
+            print(f"[WARN] Ping failed for guild {gid}: {e}")
+    await interaction.followup.send("✅ Test ping sent.", ephemeral=True)
+
+
 # ── Update loop ────────────────────────────────────────────────────────────
 
 @tasks.loop(minutes=1)
