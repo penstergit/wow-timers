@@ -4,7 +4,7 @@ Darkmoon Faire Bot — tracks the monthly Darkmoon Faire.
 Active during the first full week of each month (Eastern time).
 Starts Monday 00:01 ET, ends 7 days later.
 
-Commands: /setupdmf  (admins configure alert channel + role)
+Commands: /setupdmf, /testdmf
 """
 import os
 from pathlib import Path
@@ -21,11 +21,12 @@ from shared import (
 )
 
 load_dotenv()
-setup_logging("dmf")
 
 TOKEN = os.getenv("DISCORD_BOT_TOKEN_DMF")
 if not TOKEN:
     raise ValueError("DISCORD_BOT_TOKEN_DMF is not set in .env")
+
+setup_logging("dmf")
 
 SCRIPT_DIR  = Path(__file__).parent
 CONFIG_PATH = str(SCRIPT_DIR / "data" / "dmf-config.json")

@@ -4,7 +4,7 @@ Arena Grand Master Bot — tracks the Gurubashi Arena chest spawns.
 Chest spawns every 3 hours starting midnight US Eastern.
 Active window: ~5 minutes per spawn.
 
-Commands: /setupagm  (admins configure alert channel + role)
+Commands: /setupagm, /testagm
 """
 import os
 from pathlib import Path
@@ -21,11 +21,12 @@ from shared import (
 )
 
 load_dotenv()
-setup_logging("agm")
 
 TOKEN = os.getenv("DISCORD_BOT_TOKEN_ARENA")
 if not TOKEN:
     raise ValueError("DISCORD_BOT_TOKEN_ARENA is not set in .env")
+
+setup_logging("agm")
 
 SCRIPT_DIR  = Path(__file__).parent
 CONFIG_PATH = str(SCRIPT_DIR / "data" / "agm-config.json")
@@ -95,9 +96,6 @@ async def do_update():
                 print(f"[AGM] Avatar set from {img}")
             except discord.HTTPException as e:
                 print(f"[WARN] Avatar update failed: {e}")
-        else:
-            print("[INFO] Place images/arena.png to set the avatar")
-            bot.avatar_set = True   # don't spam the log
 
     # Role ping when chest just spawned
     if bot.was_up is False and state["isUp"]:

@@ -3,7 +3,7 @@ STV Fishing Extravaganza Bot — tracks the weekly fishing tournament.
 
 Runs every Sunday 2:00 PM – 4:00 PM US Eastern time.
 
-Commands: /setupstv  (admins configure alert channel + role)
+Commands: /setupstv, /teststv
 """
 import os
 from pathlib import Path
@@ -20,11 +20,12 @@ from shared import (
 )
 
 load_dotenv()
-setup_logging("stv")
 
 TOKEN = os.getenv("DISCORD_BOT_TOKEN_FISHING")
 if not TOKEN:
     raise ValueError("DISCORD_BOT_TOKEN_FISHING is not set in .env")
+
+setup_logging("stv")
 
 SCRIPT_DIR  = Path(__file__).parent
 CONFIG_PATH = str(SCRIPT_DIR / "data" / "stv-config.json")

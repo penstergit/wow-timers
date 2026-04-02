@@ -4,7 +4,7 @@ BG Weekend Bot — tracks the Battleground Weekend rotation.
 Rotation: AV → EOTS → WSG → AB (resets Tuesday 2am MT)
 Event live: Thursday 2am MT → Tuesday 2am MT
 
-Commands: /setupbg  (admins configure alert channel + role)
+Commands: /setupbg, /testbg
 """
 import os
 from pathlib import Path
@@ -21,11 +21,12 @@ from shared import (
 )
 
 load_dotenv()
-setup_logging("bg")
 
 TOKEN = os.getenv("DISCORD_BOT_TOKEN")
 if not TOKEN:
     raise ValueError("DISCORD_BOT_TOKEN is not set in .env")
+
+setup_logging("bg")
 
 SCRIPT_DIR  = Path(__file__).parent
 CONFIG_PATH = str(SCRIPT_DIR / "data" / "bg-config.json")
