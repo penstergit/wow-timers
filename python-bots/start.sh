@@ -11,16 +11,15 @@ start_bot() {
   local name="$1"
   local script="$2"
   local pid_file=".pid_${name}"
-  local log_file="logs/${name}.log"
 
   if [ -f "$pid_file" ] && kill -0 "$(cat "$pid_file")" 2>/dev/null; then
     echo "[SKIP] $name is already running (PID $(cat "$pid_file"))"
     return
   fi
 
-  nohup python3 "$script" >> "$log_file" 2>&1 &
+  nohup python3 "$script" > /dev/null 2>&1 &
   echo $! > "$pid_file"
-  echo "[START] $name  (PID $!)  — logs: $log_file"
+  echo "[START] $name  (PID $!)  — logs: logs/${name}.log"
 }
 
 start_bot bg    bot_bg.py

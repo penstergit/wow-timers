@@ -17,10 +17,11 @@ from dotenv import load_dotenv
 
 from shared import (
     format_countdown, find_image, save_guild_config,
-    get_dmf_state, rank_prefix, send_pings,
+    get_dmf_state, rank_prefix, send_pings, setup_logging,
 )
 
 load_dotenv()
+setup_logging("dmf")
 
 TOKEN = os.getenv("DISCORD_BOT_TOKEN_DMF")
 if not TOKEN:

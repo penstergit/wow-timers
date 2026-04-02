@@ -46,7 +46,7 @@ Place images in the `images/` directory to set bot avatars. Supported formats: `
 ./stop.sh    # stop all bots
 ```
 
-Logs are written to `logs/bg.log`, `logs/agm.log`, `logs/dmf.log`, `logs/stv.log`.
+Logs are written to `logs/bg.log`, `logs/agm.log`, `logs/dmf.log`, `logs/stv.log`. Each log file rotates at 5 MB, keeping up to 3 backups.
 
 ## Discord commands
 

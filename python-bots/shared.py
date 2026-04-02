@@ -9,13 +9,66 @@ Shared utilities for all four WoW TBC Classic Anniversary Discord bots.
 from __future__ import annotations
 from collections.abc import Callable
 from datetime import datetime, timedelta, timezone
+from logging.handlers import RotatingFileHandler
 from zoneinfo import ZoneInfo
 from pathlib import Path
 import discord
 import json
+import logging
+import sys
 
 MT = ZoneInfo("America/Denver")   # Mountain Time (BG weekends)
 ET = ZoneInfo("America/New_York")  # Eastern Time (AGM / DMF / STV)
+
+# ── Logging ────────────────────────────────────────────────────────────────
+
+SCRIPT_DIR = Path(__file__).parent
+
+
+class _LogStream:
+    """File-like wrapper that routes write() calls through a logging handler."""
+
+    def __init__(self, logger: logging.Logger, level: int = logging.INFO) -> None:
+        self._logger = logger
+        self._level = level
+        self._buf = ""
+
+    def write(self, msg: str) -> int:
+        self._buf += msg
+        while "\n" in self._buf:
+            line, self._buf = self._buf.split("\n", 1)
+            if line:
+                self._logger.log(self._level, line)
+        return len(msg)
+
+    def flush(self) -> None:
+        if self._buf:
+            self._logger.log(self._level, self._buf)
+            self._buf = ""
+
+
+def setup_logging(name: str, max_bytes: int = 5 * 1024 * 1024, backup_count: int = 3) -> None:
+    """Redirect stdout/stderr to a rotating log file (logs/<name>.log).
+
+    Keeps up to backup_count rotated files, each up to max_bytes (default 5 MB).
+    """
+    log_dir = SCRIPT_DIR / "logs"
+    log_dir.mkdir(exist_ok=True)
+
+    handler = RotatingFileHandler(
+        log_dir / f"{name}.log",
+        maxBytes=max_bytes,
+        backupCount=backup_count,
+    )
+    handler.setFormatter(logging.Formatter("%(message)s"))
+
+    logger = logging.getLogger(name)
+    logger.setLevel(logging.INFO)
+    logger.addHandler(handler)
+
+    sys.stdout = _LogStream(logger)
+    sys.stderr = _LogStream(logger, logging.ERROR)
+
 
 # ── Utilities ──────────────────────────────────────────────────────────────
 

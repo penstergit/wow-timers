@@ -17,10 +17,11 @@ from dotenv import load_dotenv
 
 from shared import (
     format_countdown, find_image, save_guild_config,
-    get_agm_state, rank_prefix, send_pings,
+    get_agm_state, rank_prefix, send_pings, setup_logging,
 )
 
 load_dotenv()
+setup_logging("agm")
 
 TOKEN = os.getenv("DISCORD_BOT_TOKEN_ARENA")
 if not TOKEN:

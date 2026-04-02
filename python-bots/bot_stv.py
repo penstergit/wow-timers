@@ -16,10 +16,11 @@ from dotenv import load_dotenv
 
 from shared import (
     format_countdown, find_image, save_guild_config,
-    get_stv_state, rank_prefix, send_pings,
+    get_stv_state, rank_prefix, send_pings, setup_logging,
 )
 
 load_dotenv()
+setup_logging("stv")
 
 TOKEN = os.getenv("DISCORD_BOT_TOKEN_FISHING")
 if not TOKEN:
