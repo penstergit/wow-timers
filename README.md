@@ -16,7 +16,9 @@ Each bot updates its Discord status and nickname every minute with a live countd
 ### 1. Install dependencies
 
 ```bash
-pip install -r requirements.txt
+cd python-bots
+python3 -m venv .venv
+.venv/bin/pip install -r requirements.txt
 ```
 
 ### 2. Configure tokens
@@ -44,6 +46,12 @@ Place images in the `images/` directory to set bot avatars. Supported formats: `
 ```bash
 ./start.sh   # start all bots
 ./stop.sh    # stop all bots
+```
+
+To start automatically on boot, add to your crontab (`crontab -e`):
+
+```
+@reboot /path/to/wow-timers/python-bots/start.sh
 ```
 
 Logs are written to `logs/bg.log`, `logs/agm.log`, `logs/dmf.log`, `logs/stv.log`. Each log file rotates at 5 MB, keeping up to 3 backups.

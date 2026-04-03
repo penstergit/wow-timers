@@ -17,7 +17,7 @@ start_bot() {
     return
   fi
 
-  nohup python3 "$script" > /dev/null 2>&1 &
+  nohup .venv/bin/python "$script" > /dev/null 2>&1 &
   echo $! > "$pid_file"
   echo "[START] $name  (PID $!)  — logs: logs/${name}.log"
 }
