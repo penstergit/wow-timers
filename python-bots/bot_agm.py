@@ -121,7 +121,7 @@ async def do_update():
     print(f"[AGM] Status: {status}")
 
     symbol = rank_prefix("agm", now)
-    nick   = f"{symbol} AGM Timer"
+    nick   = f"{symbol} AGM Chest"
     for guild in bot.guilds:
         if bot.last_nicks.get(guild.id) == nick:
             continue
