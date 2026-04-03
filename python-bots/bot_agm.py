@@ -39,6 +39,7 @@ class AGMBot(discord.Client):
         self.tree        = app_commands.CommandTree(self)
         self.avatar_set  = False
         self.was_up:    bool | None = None
+        self.warned_next: bool = False
         self.last_nicks: dict[int, str] = {}
 
     async def setup_hook(self):
@@ -97,12 +98,20 @@ async def do_update():
             except discord.HTTPException as e:
                 print(f"[WARN] Avatar update failed: {e}")
 
+    # 20-minute warning
+    if not state["isUp"] and not bot.warned_next and state["msUntilNext"] <= 20 * 60 * 1000:
+        await send_pings(bot, CONFIG_PATH, lambda rid:
+            f"<@&{rid}> ⚔️ **Arena Grand Master** chest spawns in 20 minutes!"
+        )
+        bot.warned_next = True
+
     # Role ping when chest just spawned
     if bot.was_up is False and state["isUp"]:
         await send_pings(bot, CONFIG_PATH, lambda rid:
             f"<@&{rid}> ⚔️ **Arena Grand Master** chest has spawned! "
             "Grab it fast — you have 5 minutes!"
         )
+        bot.warned_next = False
     bot.was_up = state["isUp"]
 
     status = "Chest is up!" if state["isUp"] else f"Next chest in {format_countdown(state['msUntilNext'])}"
