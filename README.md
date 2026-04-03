@@ -5,9 +5,9 @@ Four Discord bots that track in-game events for WoW Classic Anniversary, pinging
 | Bot | Event | Schedule |
 |-----|-------|----------|
 | **BG Weekend** | Battleground Weekend (AV → EOTS → WSG → AB rotation) | Thu 2am MT – Tue 2am MT |
-| **Arena Grand Master** | Gurubashi Arena chest spawns | Every 3 hours from midnight ET, 5-min window |
-| **Darkmoon Faire** | Darkmoon Faire | First full week of each month (Mon 00:01 ET) |
-| **STV Fishing** | Stranglethorn Fishing Extravaganza | Sundays 2–4 PM ET |
+| **Arena Grand Master** | Gurubashi Arena chest spawns | Every 3 hours from midnight MT, 5-min window |
+| **Darkmoon Faire** | Darkmoon Faire | First full week of each month (Mon 00:01 MT) |
+| **STV Fishing** | Stranglethorn Fishing Extravaganza | Sundays 2–4 PM MT |
 
 Each bot updates its Discord status and nickname every minute with a live countdown, and swaps its avatar between active/inactive states.
 

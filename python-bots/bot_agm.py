@@ -1,7 +1,7 @@
 """
 Arena Grand Master Bot — tracks the Gurubashi Arena chest spawns.
 
-Chest spawns every 3 hours starting midnight US Eastern.
+Chest spawns every 3 hours starting midnight US Mountain.
 Active window: ~5 minutes per spawn.
 
 Commands: /setupagm, /testagm

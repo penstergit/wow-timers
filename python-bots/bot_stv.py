@@ -1,7 +1,7 @@
 """
 STV Fishing Extravaganza Bot — tracks the weekly fishing tournament.
 
-Runs every Sunday 2:00 PM – 4:00 PM US Eastern time.
+Runs every Sunday 2:00 PM – 4:00 PM US Mountain time.
 
 Commands: /setupstv, /teststv
 """

@@ -17,8 +17,8 @@ import json
 import logging
 import sys
 
-MT = ZoneInfo("America/Denver")   # Mountain Time (BG weekends)
-ET = ZoneInfo("America/New_York")  # Eastern Time (AGM / DMF / STV)
+MT = ZoneInfo("America/Denver")    # Mountain Time (all events)
+ET = ZoneInfo("America/New_York")  # Eastern Time (unused — kept for reference)
 
 # ── Logging ────────────────────────────────────────────────────────────────
 
@@ -198,8 +198,8 @@ _CHEST_WINDOW_MS   = 5 * 60 * 1000         # 5-minute active window
 def get_agm_state(now: datetime | None = None) -> dict:
     if now is None:
         now = datetime.now(timezone.utc)
-    et = now.astimezone(ET)
-    ms_into_day = (et.hour * 3600 + et.minute * 60 + et.second) * 1000
+    mt = now.astimezone(MT)
+    ms_into_day = (mt.hour * 3600 + mt.minute * 60 + mt.second) * 1000
     slot_ms = ms_into_day % _CHEST_INTERVAL_MS
     is_up   = slot_ms < _CHEST_WINDOW_MS
     return {
@@ -212,8 +212,8 @@ def get_agm_state(now: datetime | None = None) -> dict:
 # ── Darkmoon Faire ─────────────────────────────────────────────────────────
 
 def _dmf_start(year: int, month: int) -> datetime:
-    """First Monday on or after the 1st of the month at 00:01 Eastern."""
-    first_of_month = datetime(year, month, 1, 0, 0, 0, tzinfo=ET)
+    """First Monday on or after the 1st of the month at 00:01 Mountain."""
+    first_of_month = datetime(year, month, 1, 0, 0, 0, tzinfo=MT)
     days_until_mon = (7 - first_of_month.weekday()) % 7  # 0 if 1st is already Monday
     monday = first_of_month + timedelta(days=days_until_mon)
     return monday.replace(minute=1)
@@ -222,13 +222,13 @@ def _dmf_start(year: int, month: int) -> datetime:
 def get_dmf_state(now: datetime | None = None) -> dict:
     if now is None:
         now = datetime.now(timezone.utc)
-    et = now.astimezone(ET)
+    mt = now.astimezone(MT)
     now_ms = int(now.timestamp() * 1000)
 
     # Check this month and next
     months = [
-        (et.year, et.month),
-        (et.year + 1, 1) if et.month == 12 else (et.year, et.month + 1),
+        (mt.year, mt.month),
+        (mt.year + 1, 1) if mt.month == 12 else (mt.year, mt.month + 1),
     ]
     for y, m in months:
         start = _dmf_start(y, m)
@@ -241,8 +241,8 @@ def get_dmf_state(now: datetime | None = None) -> dict:
             return {"active": False, "msUntilStart": s_ms - now_ms, "msUntilEnd": 0}
 
     # Fallback to month after next
-    y2, m2 = (et.year + 1, 2) if et.month == 11 else (
-              (et.year + 1, 1) if et.month == 12 else (et.year, et.month + 2))
+    y2, m2 = (mt.year + 1, 2) if mt.month == 11 else (
+              (mt.year + 1, 1) if mt.month == 12 else (mt.year, mt.month + 2))
     s_ms = int(_dmf_start(y2, m2).astimezone(timezone.utc).timestamp() * 1000)
     return {"active": False, "msUntilStart": s_ms - now_ms, "msUntilEnd": 0}
 
@@ -252,16 +252,16 @@ def get_dmf_state(now: datetime | None = None) -> dict:
 def get_stv_state(now: datetime | None = None) -> dict:
     if now is None:
         now = datetime.now(timezone.utc)
-    et = now.astimezone(ET)
+    mt = now.astimezone(MT)
     now_ms = int(now.timestamp() * 1000)
 
     # Python weekday: Mon=0 ... Sat=5 Sun=6
-    days_since_sun = (et.weekday() + 1) % 7   # 0 if today is Sunday
-    sunday_dt = et - timedelta(days=days_since_sun)
+    days_since_sun = (mt.weekday() + 1) % 7   # 0 if today is Sunday
+    sunday_dt = mt - timedelta(days=days_since_sun)
     sunday_date = sunday_dt.date()
 
-    this_start = datetime(sunday_date.year, sunday_date.month, sunday_date.day, 14, 0, 0, tzinfo=ET)
-    this_end   = datetime(sunday_date.year, sunday_date.month, sunday_date.day, 16, 0, 0, tzinfo=ET)
+    this_start = datetime(sunday_date.year, sunday_date.month, sunday_date.day, 14, 0, 0, tzinfo=MT)
+    this_end   = datetime(sunday_date.year, sunday_date.month, sunday_date.day, 16, 0, 0, tzinfo=MT)
     next_start = this_start + timedelta(days=7)
 
     ts_ms = int(this_start.astimezone(timezone.utc).timestamp() * 1000)
