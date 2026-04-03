@@ -132,7 +132,7 @@ async def do_update():
     print(f"[DMF] Status: {status}")
 
     symbol = rank_prefix("dmf", now)
-    nick   = f"{symbol} DMF Active" if state["active"] else f"{symbol} DMF Offline"
+    nick   = f"{symbol} DMF Week" if state["active"] else f"{symbol} DMF Week"
     for guild in bot.guilds:
         if bot.last_nicks.get(guild.id) == nick:
             continue
