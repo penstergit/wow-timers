@@ -98,10 +98,10 @@ async def do_update():
             except discord.HTTPException as e:
                 print(f"[WARN] Avatar update failed: {e}")
 
-    # 20-minute warning
-    if not state["isUp"] and not bot.warned_next and state["msUntilNext"] <= 20 * 60 * 1000:
+    # 10-minute warning
+    if not state["isUp"] and not bot.warned_next and state["msUntilNext"] <= 10 * 60 * 1000:
         await send_pings(bot, CONFIG_PATH, lambda rid:
-            f"<@&{rid}> ⚔️ **Arena Grand Master** chest spawns in 20 minutes!"
+            f"<@&{rid}> ⚔️ **Arena Grand Master** chest spawns in 10 minutes!"
         )
         bot.warned_next = True
 
