@@ -48,10 +48,10 @@ Place images in the `images/` directory to set bot avatars. Supported formats: `
 ./stop.sh    # stop all bots
 ```
 
-To start automatically on boot, add to your crontab (`crontab -e`):
+To start automatically on boot (waits for network before starting), add to your crontab (`crontab -e`):
 
 ```
-@reboot /path/to/wow-timers/python-bots/start.sh
+@reboot /path/to/wow-timers/python-bots/start-when-online.sh
 ```
 
 Logs are written to `logs/bg.log`, `logs/agm.log`, `logs/dmf.log`, `logs/stv.log`. Each log file rotates at 5 MB, keeping up to 3 backups.
