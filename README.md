@@ -1,7 +1,7 @@
 # WoW Classic Anniversary Timers
 
 Four Discord bots that track in-game events for WoW Classic Anniversary, pinging a configured role when each event goes live.
-Arena Grand Master bot pings twice, once at 20 minutes prior, and again at the drop of the chest every 3 hours.
+Arena Grand Master bot pings twice, once at 10 minutes prior, and again at the drop of the chest every 3 hours.
 
 | Bot | Event | Schedule |
 |-----|-------|----------|
