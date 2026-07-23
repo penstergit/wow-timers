@@ -17,7 +17,7 @@ from dotenv import load_dotenv
 
 from shared import (
     format_countdown, find_image, save_guild_config,
-    get_agm_state, rank_prefix, send_pings, setup_logging,
+    get_agm_state, rank_prefix, send_pings, send_broadcast, setup_logging,
 )
 
 load_dotenv()
@@ -105,9 +105,13 @@ async def do_update():
         )
         bot.warned_next = True
 
-    # Chest just spawned: reset the warning latch for the next cycle.
-    # No ping here — that would be a second ping on top of the 10-min warning.
+    # Chest just spawned: post the pickup notice (NO ping) and reset the latch.
+    # The role is only pinged by the 10-min warning above — this keeps the
+    # informational "grab it fast" message while avoiding a second ping.
     if bot.was_up is False and state["isUp"]:
+        await send_broadcast(bot, CONFIG_PATH, lambda:
+            "⚔️ **Arena Grand Master** chest has spawned! Grab it fast — you have 5 minutes!"
+        )
         bot.warned_next = False
     bot.was_up = state["isUp"]
 

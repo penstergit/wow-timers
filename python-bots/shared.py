@@ -126,6 +126,25 @@ async def send_pings(bot: discord.Client, config_path: str, make_message: Callab
             print(f"[WARN] Ping failed for guild {gid}: {e}")
 
 
+async def send_broadcast(bot: discord.Client, config_path: str, make_message: Callable[[], str]) -> None:
+    """Post a message to every configured guild channel WITHOUT pinging the role.
+
+    Same delivery loop as send_pings, but no role mention is appended — an
+    informational post that does not notify. allowed_mentions is forced to none
+    so nothing in the body can accidentally ping.
+    """
+    config = load_config(config_path)
+    for gid, cfg in config.items():
+        try:
+            guild = bot.get_guild(int(gid))
+            if guild:
+                ch = guild.get_channel(int(cfg["channelId"]))
+                if ch:
+                    await ch.send(make_message(), allowed_mentions=discord.AllowedMentions.none())
+        except Exception as e:
+            print(f"[WARN] Broadcast failed for guild {gid}: {e}")
+
+
 def save_guild_config(path: str, guild_id: int | str,
                       channel_id: int | str, role_id: int | str) -> None:
     p = Path(path)

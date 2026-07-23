@@ -95,17 +95,24 @@ All times are **Mountain Time** (`MT = America/Denver`, DST-safe via `zoneinfo`)
   **AV-week anchor are still valid**. No change to `weekend_start`/`week_end`/`_BG_ANCHOR`.
 - **Affected:** none. **Dropped from the work list.**
 
-## 6. AGM — remove the "chest dropped" ping, keep only the 10-min advance  · `bot_agm.py`
+## 6. AGM — drop the *ping* on chest spawn, keep the message  · `bot_agm.py` + `shared.py`  — **SHIPPED (corrected)**
 
-- **Current:** two pings fire — the **10-min warning** (`bot_agm.py:102-106`) and the
-  **chest-spawned** ping (`:109-113`). `/testagm` (`:136-144`) sends the spawn message.
-- **Proposed:** delete the chest-spawned `send_pings` block; **keep** the `was_up` state tracking so
-  `warned_next` still resets each cycle (`bot.warned_next = False` on the up-edge), just without
-  sending. This kills the **double ping** — role is mentioned **only** on the 10-min-prior warning.
-- **RESOLVED (penster):** **keep `/testagm`**, sending the **same message**, but with the `@role` at
-  the **end** of the message (per item 1), and ping **only on the 10-min-prior** path — do **not**
-  ping on the drop. Point `/testagm` at the 10-min-warning copy so tests match live behavior.
-- **Affected:** `bot_agm.py` only.
+- **Current:** two pings fired — the **10-min warning** and the **chest-spawned** ping.
+  `/testagm` sends the 10-min-warning copy.
+- **CORRECTION (Dangitsmcg, screenshot 2026-07-23):** the first pass **deleted the entire
+  chest-spawned message**. That was too aggressive — only the **@role ping** was meant to be removed.
+  The **"chest has spawned! Grab it fast — you have 5 minutes!"** message must still **post** on the
+  up-edge, just **without** a role mention. "Avoid the double ping" = the role is pinged **once**
+  (10-min warning), not that the second message disappears.
+- **Implemented:**
+  - `shared.py` — new `send_broadcast(bot, config_path, make_message)`: same delivery loop as
+    `send_pings` but appends **no** mention and forces `allowed_mentions=none` (informational post).
+  - `bot_agm.py` — the up-edge branch now posts the "Grab it fast" message via `send_broadcast`
+    (no ping) and still resets `warned_next`. The 10-min warning keeps its ping via `send_pings`.
+  - `/testagm` unchanged — still fires the 10-min-warning copy (with ping).
+- **Affected:** `bot_agm.py`, `shared.py`.
+- **Verify:** let the timer run and watch a real spawn — 10-min warning **pings**, drop message
+  **posts with no ping**.
 
 ## 7. AGM — suppress late-night pings on weekday nights  · `bot_agm.py` (+ helper in `shared.py`)
 
