@@ -33,6 +33,9 @@ SCRIPT_DIR  = Path(__file__).parent
 CONFIG_PATH = str(SCRIPT_DIR / "data" / "agm-config.json")
 IMAGES_DIR  = SCRIPT_DIR / "images"
 
+MSG_WARN10 = "⚔️ **Arena Grand Master** chest spawns in 10 minutes!"
+MSG_SPAWN  = "⚔️ **Arena Grand Master** chest has spawned! Grab it fast — you have 5 minutes!"
+
 
 class AGMBot(discord.Client):
     def __init__(self):
@@ -102,18 +105,14 @@ async def do_update():
 
     # 10-minute warning — the ONLY ping AGM sends
     if not state["isUp"] and not bot.warned_next and state["msUntilNext"] <= 10 * 60 * 1000:
-        await send_pings(bot, CONFIG_PATH, lambda:
-            "⚔️ **Arena Grand Master** chest spawns in 10 minutes!"
-        )
+        await send_pings(bot, CONFIG_PATH, lambda: MSG_WARN10)
         bot.warned_next = True
 
     # Chest just spawned: post the pickup notice (NO ping) and reset the latch.
     # The role is only pinged by the 10-min warning above — this keeps the
     # informational "grab it fast" message while avoiding a second ping.
     if bot.was_up is False and state["isUp"]:
-        await send_broadcast(bot, CONFIG_PATH, lambda:
-            "⚔️ **Arena Grand Master** chest has spawned! Grab it fast — you have 5 minutes!"
-        )
+        await send_broadcast(bot, CONFIG_PATH, lambda: MSG_SPAWN)
         bot.warned_next = False
     bot.was_up = state["isUp"]
 
@@ -138,11 +137,17 @@ async def do_update():
 # 📢 Slash command to PING saved role
 @bot.tree.command(name="testagm", description="Ping the saved role in the saved channel")
 @require_dev_role()
-async def testagm(interaction: discord.Interaction):
+@app_commands.describe(warning="Send the 10-minute advance warning instead of the spawn message")
+async def testagm(interaction: discord.Interaction, warning: bool = False):
     await interaction.response.defer(ephemeral=True)
-    await send_pings(bot, CONFIG_PATH, lambda:
-        "⚔️ **Arena Grand Master** chest spawns in 10 minutes!"
-    )
-    await interaction.followup.send("✅ Test ping sent.", ephemeral=True)
+    if warning:
+        # advance warning — pings the role (matches production)
+        await send_pings(bot, CONFIG_PATH, lambda: MSG_WARN10)
+        label = "10-min warning"
+    else:
+        # spawn message — no ping (matches production)
+        await send_broadcast(bot, CONFIG_PATH, lambda: MSG_SPAWN)
+        label = "spawn message"
+    await interaction.followup.send(f"✅ Test {label} sent.", ephemeral=True)
 
 bot.run(TOKEN)
