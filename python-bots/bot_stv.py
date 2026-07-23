@@ -31,6 +31,11 @@ SCRIPT_DIR  = Path(__file__).parent
 CONFIG_PATH = str(SCRIPT_DIR / "data" / "stv-config.json")
 IMAGES_DIR  = SCRIPT_DIR / "images"
 
+MSG_START  = ("🎣 **STV Fishing Extravaganza** has started! "
+              "Head to Stranglethorn Vale — you have 2 hours!")
+MSG_WARN30 = ("🎣 **STV Fishing Extravaganza** starts in 30 minutes! "
+              "Bring your rods to Stranglethorn Vale!")
+
 
 class STVBot(discord.Client):
     def __init__(self):
@@ -38,6 +43,7 @@ class STVBot(discord.Client):
         self.tree            = app_commands.CommandTree(self)
         self.last_avatar_key: str | None = None
         self.was_active:     bool | None = None
+        self.warned_30:      bool        = False
         self.last_nicks:     dict[int, str] = {}
 
     async def setup_hook(self):
@@ -73,13 +79,13 @@ async def cmd_setup_stv(
 
 @bot.tree.command(name="teststv", description="Ping the saved role in the saved channel")
 @app_commands.default_permissions(administrator=True)
-async def teststv(interaction: discord.Interaction):
+@app_commands.describe(warning="Send the 30-minute advance warning instead of the start ping")
+async def teststv(interaction: discord.Interaction, warning: bool = False):
     await interaction.response.defer(ephemeral=True)
-    await send_pings(bot, CONFIG_PATH, lambda:
-        f"🎣 **STV Fishing Extravaganza** has started! "
-        "Head to Stranglethorn Vale — you have 2 hours!"
-    )
-    await interaction.followup.send("✅ Test ping sent.", ephemeral=True)
+    msg = MSG_WARN30 if warning else MSG_START
+    await send_pings(bot, CONFIG_PATH, lambda: msg)
+    label = "30-min warning" if warning else "start"
+    await interaction.followup.send(f"✅ Test {label} ping sent.", ephemeral=True)
 
 
 @tasks.loop(minutes=1)
@@ -111,12 +117,16 @@ async def do_update():
             print("[INFO] Place images/fishing.png (or fishing_active.png / fishing_inactive.png)")
         bot.last_avatar_key = key
 
+    # 30-minute advance warning (pings the role) — re-arms once the window passes
+    if not state["active"] and not bot.warned_30 and state["msUntilStart"] <= 30 * 60 * 1000:
+        await send_pings(bot, CONFIG_PATH, lambda: MSG_WARN30)
+        bot.warned_30 = True
+    elif state["msUntilStart"] > 30 * 60 * 1000:
+        bot.warned_30 = False
+
     # Role ping when tournament starts
     if bot.was_active is False and state["active"]:
-        await send_pings(bot, CONFIG_PATH, lambda:
-            f"🎣 **STV Fishing Extravaganza** has started! "
-            "Head to Stranglethorn Vale — you have 2 hours!"
-        )
+        await send_pings(bot, CONFIG_PATH, lambda: MSG_START)
     bot.was_active = state["active"]
 
     status = (
