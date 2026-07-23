@@ -17,6 +17,7 @@ from dotenv import load_dotenv
 from shared import (
     format_countdown, find_image, save_guild_config,
     get_stv_state, rank_prefix, send_pings, setup_logging,
+    require_dev_role, install_dev_error_handler,
 )
 
 load_dotenv()
@@ -57,10 +58,11 @@ class STVBot(discord.Client):
 
 
 bot = STVBot()
+install_dev_error_handler(bot.tree)
 
 
 @bot.tree.command(name="setupstv", description="Configure STV Fishing alert channel and role")
-@app_commands.default_permissions(administrator=True)
+@require_dev_role()
 async def cmd_setup_stv(
     interaction: discord.Interaction,
     channel: discord.TextChannel,
@@ -78,7 +80,7 @@ async def cmd_setup_stv(
 
 
 @bot.tree.command(name="teststv", description="Ping the saved role in the saved channel")
-@app_commands.default_permissions(administrator=True)
+@require_dev_role()
 @app_commands.describe(warning="Send the 30-minute advance warning instead of the start ping")
 async def teststv(interaction: discord.Interaction, warning: bool = False):
     await interaction.response.defer(ephemeral=True)

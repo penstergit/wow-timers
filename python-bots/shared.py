@@ -13,12 +13,58 @@ from logging.handlers import RotatingFileHandler
 from zoneinfo import ZoneInfo
 from pathlib import Path
 import discord
+from discord import app_commands
 import json
 import logging
 import sys
 
 MT = ZoneInfo("America/Denver")    # Mountain Time (all events)
 ET = ZoneInfo("America/New_York")  # Eastern Time (unused — kept for reference)
+
+# ── Access control ─────────────────────────────────────────────────────────
+
+DEV_ROLE_NAME = "dev"   # slash commands are gated to members holding this role
+
+
+def require_dev_role():
+    """Restrict a slash command to members holding a role named DEV_ROLE_NAME.
+
+    Matched by role *name* (case-insensitive), not ID, so the same gate works
+    on any server the bot is deployed to without hard-coding role IDs.
+    """
+    async def predicate(interaction: discord.Interaction) -> bool:
+        member = interaction.user
+        ok = isinstance(member, discord.Member) and any(
+            r.name.lower() == DEV_ROLE_NAME.lower() for r in member.roles
+        )
+        if not ok:
+            raise app_commands.CheckFailure(
+                f"You need the **{DEV_ROLE_NAME}** role to use this command."
+            )
+        return True
+
+    return app_commands.check(predicate)
+
+
+async def _on_app_command_error(interaction: discord.Interaction,
+                                error: app_commands.AppCommandError) -> None:
+    """Turn a failed dev-role check into a clean ephemeral message."""
+    if isinstance(error, app_commands.CheckFailure):
+        msg = str(error) or "You don't have permission to use this command."
+        try:
+            if interaction.response.is_done():
+                await interaction.followup.send(msg, ephemeral=True)
+            else:
+                await interaction.response.send_message(msg, ephemeral=True)
+        except discord.HTTPException:
+            pass
+    else:
+        raise error
+
+
+def install_dev_error_handler(tree: app_commands.CommandTree) -> None:
+    """Wire the CheckFailure → ephemeral-message handler onto a command tree."""
+    tree.on_error = _on_app_command_error
 
 # ── Logging ────────────────────────────────────────────────────────────────
 

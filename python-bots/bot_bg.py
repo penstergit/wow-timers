@@ -18,6 +18,7 @@ from dotenv import load_dotenv
 from shared import (
     format_countdown, find_image, save_guild_config,
     get_rotation_info, rank_prefix, send_pings, setup_logging,
+    require_dev_role, install_dev_error_handler,
 )
 
 load_dotenv()
@@ -56,12 +57,13 @@ class BGBot(discord.Client):
 
 
 bot = BGBot()
+install_dev_error_handler(bot.tree)
 
 
 # ── Slash command ──────────────────────────────────────────────────────────
 
 @bot.tree.command(name="setupbg", description="Configure BG Weekend alert channel and role")
-@app_commands.default_permissions(administrator=True)
+@require_dev_role()
 async def cmd_setup_bg(
     interaction: discord.Interaction,
     channel: discord.TextChannel,
@@ -79,7 +81,7 @@ async def cmd_setup_bg(
 
 
 @bot.tree.command(name="testbg", description="Ping the saved role in the saved channel")
-@app_commands.default_permissions(administrator=True)
+@require_dev_role()
 async def testbg(interaction: discord.Interaction):
     await interaction.response.defer(ephemeral=True)
     short = get_rotation_info()["currentBG"]["shortName"]

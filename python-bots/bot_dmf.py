@@ -18,6 +18,7 @@ from dotenv import load_dotenv
 from shared import (
     format_countdown, find_image, save_guild_config,
     get_dmf_state, rank_prefix, send_pings, setup_logging,
+    require_dev_role, install_dev_error_handler,
 )
 
 load_dotenv()
@@ -52,10 +53,11 @@ class DMFBot(discord.Client):
 
 
 bot = DMFBot()
+install_dev_error_handler(bot.tree)
 
 
 @bot.tree.command(name="setupdmf", description="Configure Darkmoon Faire alert channel and role")
-@app_commands.default_permissions(administrator=True)
+@require_dev_role()
 async def cmd_setup_dmf(
     interaction: discord.Interaction,
     channel: discord.TextChannel,
@@ -73,7 +75,7 @@ async def cmd_setup_dmf(
 
 
 @bot.tree.command(name="testdmf", description="Ping the saved role in the saved channel")
-@app_commands.default_permissions(administrator=True)
+@require_dev_role()
 async def testdmf(interaction: discord.Interaction):
     await interaction.response.defer(ephemeral=True)
     await send_pings(bot, CONFIG_PATH, lambda:
