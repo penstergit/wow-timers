@@ -83,7 +83,7 @@ async def cmd_setup_bg(
 async def testbg(interaction: discord.Interaction):
     await interaction.response.defer(ephemeral=True)
     short = get_rotation_info()["currentBG"]["shortName"]
-    await send_pings(bot, CONFIG_PATH, lambda rid: f"<@&{rid}> 🏟️ **{short} Weekend** is now live!")
+    await send_pings(bot, CONFIG_PATH, lambda: f"🏟️ **{short} Weekend** is now live!")
     await interaction.followup.send("✅ Test ping sent.", ephemeral=True)
 
 
@@ -122,8 +122,8 @@ async def do_update():
 
     # Role ping when weekend goes live
     if bot.was_active is False and info["isActive"]:
-        await send_pings(bot, CONFIG_PATH, lambda rid:
-            f"<@&{rid}> 🏟️ **{short} Weekend** is now live! "
+        await send_pings(bot, CONFIG_PATH, lambda:
+            f"🏟️ **{short} Weekend** is now live! "
             f"Active for {format_countdown(info['msUntilEnd'])}."
         )
     bot.was_active = info["isActive"]

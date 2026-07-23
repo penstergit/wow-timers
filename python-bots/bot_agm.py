@@ -98,19 +98,16 @@ async def do_update():
             except discord.HTTPException as e:
                 print(f"[WARN] Avatar update failed: {e}")
 
-    # 10-minute warning
+    # 10-minute warning — the ONLY ping AGM sends
     if not state["isUp"] and not bot.warned_next and state["msUntilNext"] <= 10 * 60 * 1000:
-        await send_pings(bot, CONFIG_PATH, lambda rid:
-            f"<@&{rid}> ⚔️ **Arena Grand Master** chest spawns in 10 minutes!"
+        await send_pings(bot, CONFIG_PATH, lambda:
+            "⚔️ **Arena Grand Master** chest spawns in 10 minutes!"
         )
         bot.warned_next = True
 
-    # Role ping when chest just spawned
+    # Chest just spawned: reset the warning latch for the next cycle.
+    # No ping here — that would be a second ping on top of the 10-min warning.
     if bot.was_up is False and state["isUp"]:
-        await send_pings(bot, CONFIG_PATH, lambda rid:
-            f"<@&{rid}> ⚔️ **Arena Grand Master** chest has spawned! "
-            "Grab it fast — you have 5 minutes!"
-        )
         bot.warned_next = False
     bot.was_up = state["isUp"]
 
@@ -137,9 +134,8 @@ async def do_update():
 @app_commands.default_permissions(administrator=True)
 async def testagm(interaction: discord.Interaction):
     await interaction.response.defer(ephemeral=True)
-    await send_pings(bot, CONFIG_PATH, lambda rid:
-        f"<@&{rid}> ⚔️ **Arena Grand Master** chest has spawned! "
-        "Grab it fast — you have 5 minutes!"
+    await send_pings(bot, CONFIG_PATH, lambda:
+        "⚔️ **Arena Grand Master** chest spawns in 10 minutes!"
     )
     await interaction.followup.send("✅ Test ping sent.", ephemeral=True)
 

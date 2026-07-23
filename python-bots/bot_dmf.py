@@ -76,9 +76,9 @@ async def cmd_setup_dmf(
 @app_commands.default_permissions(administrator=True)
 async def testdmf(interaction: discord.Interaction):
     await interaction.response.defer(ephemeral=True)
-    await send_pings(bot, CONFIG_PATH, lambda rid:
-        f"<@&{rid}> 🎪 **Darkmoon Faire** is now open! "
-        "Head to Elwynn Forest or Mulgore."
+    await send_pings(bot, CONFIG_PATH, lambda:
+        f"🎪 **Darkmoon Faire** is now open! "
+        "Head to Elwynn Forest, Mulgore, or Terokkar Forest."
     )
     await interaction.followup.send("✅ Test ping sent.", ephemeral=True)
 
@@ -115,9 +115,9 @@ async def do_update():
 
     # Role ping when faire opens
     if bot.was_active is False and state["active"]:
-        await send_pings(bot, CONFIG_PATH, lambda rid:
-            f"<@&{rid}> 🎪 **Darkmoon Faire** is now open! "
-            "Head to Elwynn Forest or Mulgore."
+        await send_pings(bot, CONFIG_PATH, lambda:
+            f"🎪 **Darkmoon Faire** is now open! "
+            "Head to Elwynn Forest, Mulgore, or Terokkar Forest."
         )
     bot.was_active = state["active"]
 

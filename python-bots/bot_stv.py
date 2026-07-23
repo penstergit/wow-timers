@@ -75,8 +75,8 @@ async def cmd_setup_stv(
 @app_commands.default_permissions(administrator=True)
 async def teststv(interaction: discord.Interaction):
     await interaction.response.defer(ephemeral=True)
-    await send_pings(bot, CONFIG_PATH, lambda rid:
-        f"<@&{rid}> 🎣 **STV Fishing Extravaganza** has started! "
+    await send_pings(bot, CONFIG_PATH, lambda:
+        f"🎣 **STV Fishing Extravaganza** has started! "
         "Head to Stranglethorn Vale — you have 2 hours!"
     )
     await interaction.followup.send("✅ Test ping sent.", ephemeral=True)
@@ -113,8 +113,8 @@ async def do_update():
 
     # Role ping when tournament starts
     if bot.was_active is False and state["active"]:
-        await send_pings(bot, CONFIG_PATH, lambda rid:
-            f"<@&{rid}> 🎣 **STV Fishing Extravaganza** has started! "
+        await send_pings(bot, CONFIG_PATH, lambda:
+            f"🎣 **STV Fishing Extravaganza** has started! "
             "Head to Stranglethorn Vale — you have 2 hours!"
         )
     bot.was_active = state["active"]

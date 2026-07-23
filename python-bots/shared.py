@@ -107,10 +107,12 @@ def load_config(path: str) -> dict:
         return {}
 
 
-async def send_pings(bot: discord.Client, config_path: str, make_message: Callable[[str], str]) -> None:
+async def send_pings(bot: discord.Client, config_path: str, make_message: Callable[[], str]) -> None:
     """Send a message to every configured guild channel.
 
-    make_message receives the role_id string and returns the message to send.
+    make_message returns the message body WITHOUT the role mention; the role
+    mention is appended at the END of the body (single space separator) so the
+    trailing-mention format is enforced in one place for every bot.
     """
     config = load_config(config_path)
     for gid, cfg in config.items():
@@ -119,7 +121,7 @@ async def send_pings(bot: discord.Client, config_path: str, make_message: Callab
             if guild:
                 ch = guild.get_channel(int(cfg["channelId"]))
                 if ch:
-                    await ch.send(make_message(cfg["roleId"]))
+                    await ch.send(f"{make_message()} <@&{cfg['roleId']}>")
         except Exception as e:
             print(f"[WARN] Ping failed for guild {gid}: {e}")
 
