@@ -16,7 +16,7 @@ from dotenv import load_dotenv
 
 from shared import (
     format_countdown, find_image, save_guild_config,
-    get_stv_state, rank_prefix, send_pings, setup_logging,
+    get_stv_state, rank_prefix, send_pings, send_broadcast, setup_logging,
     require_dev_role, install_dev_error_handler,
 )
 
@@ -81,13 +81,18 @@ async def cmd_setup_stv(
 
 @bot.tree.command(name="teststv", description="Ping the saved role in the saved channel")
 @require_dev_role()
-@app_commands.describe(warning="Send the 30-minute advance warning instead of the start ping")
+@app_commands.describe(warning="Send the 30-minute advance warning instead of the start message")
 async def teststv(interaction: discord.Interaction, warning: bool = False):
     await interaction.response.defer(ephemeral=True)
-    msg = MSG_WARN30 if warning else MSG_START
-    await send_pings(bot, CONFIG_PATH, lambda: msg)
-    label = "30-min warning" if warning else "start"
-    await interaction.followup.send(f"✅ Test {label} ping sent.", ephemeral=True)
+    if warning:
+        # advance warning — pings the role (matches production)
+        await send_pings(bot, CONFIG_PATH, lambda: MSG_WARN30)
+        label = "30-min warning"
+    else:
+        # start message — no ping (matches production)
+        await send_broadcast(bot, CONFIG_PATH, lambda: MSG_START)
+        label = "start message"
+    await interaction.followup.send(f"✅ Test {label} sent.", ephemeral=True)
 
 
 @tasks.loop(minutes=1)
@@ -126,9 +131,11 @@ async def do_update():
     elif state["msUntilStart"] > 30 * 60 * 1000:
         bot.warned_30 = False
 
-    # Role ping when tournament starts
+    # Tournament just started: post the start notice (NO ping).
+    # The role is only pinged by the 30-min advance warning above — this mirrors
+    # the AGM style (ping on advance, silent on the actual occurrence).
     if bot.was_active is False and state["active"]:
-        await send_pings(bot, CONFIG_PATH, lambda: MSG_START)
+        await send_broadcast(bot, CONFIG_PATH, lambda: MSG_START)
     bot.was_active = state["active"]
 
     status = (
