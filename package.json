@@ -1,0 +1,7 @@
+{
+  "name": "wow-timers",
+  "version": "0.1.0",
+  "private": true,
+  "description": "WoW Classic Anniversary event-timer Discord bots (BG Weekend, Arena Grand Master, Darkmoon Faire, STV Fishing). This is a Python project (see python-bots/); this package.json is a stub so the Betty bot can target the repo via `project set`.",
+  "license": "UNLICENSED"
+}
