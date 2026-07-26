@@ -134,6 +134,76 @@ All times are **Mountain Time** (`MT = America/Denver`, DST-safe via `zoneinfo`)
 
 ---
 
+## 8. DM role-holders on event fire  · *all 4 bots* · `shared.py` + each bot
+
+**Source:** Dangitsmcg (Discord, 2026-07-25) + penster DM (2026-07-25). New request, added
+after the original punch-list. **Time-sensitive:** mcg wants to test on Sunday **2026-07-26**
+against the live STV window (2–4 PM MT, 30-min advance ~1:30 PM MT).
+
+- **Intent (mcg):** in addition to the in-channel role ping, the bot should **DM every member
+  holding the configured alert role** the same notification. Wants an **ON/OFF toggle** ("some
+  sort of menu"), **default ON**. Only **AGM + STV** matter for the classic-twink discord, but
+  **bake the shared helper into all 4** (harmless). mcg will hold the roles himself and test live.
+- **Prerequisite — DONE:** DMing role members requires enumerating `role.members`, which needs the
+  **Server Members privileged intent**. **penster enabled it in the Dev Portal (per bot app) on
+  2026-07-25** → unblocked. NB: this is *not* the server Integrations "command permissions" panel
+  penster set earlier — that only governs who can *invoke* the commands, not member enumeration.
+- **Current:** bots only `send_pings` (channel + `<@&role>`) and `send_broadcast` (channel, silent).
+  No DM path. Each bot is constructed with `discord.Intents.default()` (no members intent, so
+  `role.members` would be empty).
+
+**Proposed:**
+
+- **`shared.py`:**
+  - New **`send_dms(bot, config_path, make_message)`** — same per-guild loop as `send_pings`, but:
+    skip guilds where `cfg.get("dmEnabled", True)` is `False` (default ON); resolve
+    `guild.get_role(int(cfg["roleId"]))`; iterate `role.members`; skip `m.bot`; `await m.send(...)`
+    wrapped in try/except (`discord.Forbidden` = user's DMs closed, `discord.HTTPException`) so one
+    failure never aborts the batch. DM body reuses the existing `MSG_*` copy **without** the
+    `<@&role>` mention (mentions are inert in DMs).
+  - **`dmEnabled: bool`** added to the per-guild config schema. `save_guild_config` must **preserve**
+    an existing `dmEnabled` when `/setup` is re-run (it currently replaces the whole guild dict and
+    would reset it). Add **`set_dm_enabled(path, guild_id, enabled)`** for the toggle.
+- **Each bot (`bot_stv/agm/dmf/bg.py`):**
+  - Enable the intent: `intents = discord.Intents.default(); intents.members = True`. **Mandates a
+    restart** (safe now that the portal intent is on; relies on discord.py default
+    `chunk_guilds_at_startup=True` so `role.members` populates).
+  - Call `send_dms` at the notification point(s) (see trigger table).
+  - Dev-gated **toggle command** per bot, e.g. `/stvdms enabled:true|false` → `set_dm_enabled`.
+    Default stays ON if never run.
+  - **Test commands also DM:** `/teststv` + `/testagm` fire `send_dms` alongside the existing send so
+    mcg can test on demand without waiting for the clock.
+
+**Trigger design (DM fires where the bot already alerts):**
+
+| Bot | DM on | Volume |
+|-----|-------|--------|
+| STV | 30-min advance **and** "it started" | ~2/week (light) |
+| BG | go-live | ~1/week |
+| DMF | open | ~1/month |
+| AGM | 10-min advance (spawn DM optional) | 8/day (16 if +spawn) |
+
+**Affected:** `shared.py`, all four `bot_*.py`, `CLAUDE.md` (document the DM path + members-intent
+requirement + toggle command, same commit).
+
+**Failure modes handled:** DMs-closed users skipped (`Forbidden`); other bots skipped; missing/renamed
+role guarded; batch never aborts on one bad send. Small role → no rate-limit concern (flag for future
+if a role grows large — mass DM can trip Discord spam heuristics).
+
+**Deployment sequence:** implement → commit/push → **kill the 4 running bots** (duplicate-process
+hazard) and confirm dead → relaunch all 4 → verify `[XXX] Online as …` in each log → mcg tests
+`/teststv` + `/testagm`, then the live STV window at 2 PM MT. Ship before ~1:30 PM MT to catch today's
+live STV advance.
+
+**Rollback:** `/…dms enabled:false` per guild kills DMs with no redeploy. (A full code revert would
+also require removing `intents.members=True` before restart — leaving it on while the portal intent is
+off crashes login — so the toggle is the preferred kill switch.)
+
+**Open Q (mcg):** AGM DM volume — **10-min heads-up only (8/day, recommended)** or **also on spawn
+(16/day)**?
+
+---
+
 ## Cross-cutting notes
 
 - **Coordinate with penster** — he organized these bots. **Push access confirmed** (direct push to
@@ -167,3 +237,7 @@ All times are **Mountain Time** (`MT = America/Denver`, DST-safe via `zoneinfo`)
       "weekend" (Fri+Sat vs Sat+Sun); recommend keying the test off the **spawn's** day.
 - [x] Ping format — **end of message, single space** before `<@&role>`; via option B.
 - [x] Repo workflow — **direct push** access confirmed.
+- [x] DM feature — **Server Members intent enabled by penster (2026-07-25)**; feature unblocked.
+- [x] DM feature — default **ON**, per-guild toggle, baked into all 4, AGM+STV are the priority (mcg).
+- [ ] DM feature — AGM DM trigger: **10-min heads-up only (8/day, rec)** vs heads-up + spawn (16/day) —
+      mcg to confirm.
