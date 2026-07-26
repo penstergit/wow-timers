@@ -52,13 +52,22 @@ logic is shared.
 - **Ranking:** `compute_rank` / `rank_prefix` assign the ①②③④ nickname prefix by
   urgency (active + soonest-to-end ranks first; inactive events sorted after via a
   +100-day penalty).
-- **Delivery — two functions, pick deliberately:**
+- **Delivery — three functions, pick deliberately:**
   - `send_pings(bot, config_path, make_message)` — appends the role mention
     `<@&roleId>` to the END of the body and **pings**. Use for advance warnings and
     for BG/DMF occurrence messages.
   - `send_broadcast(bot, config_path, make_message)` — posts with
     `allowed_mentions=AllowedMentions.none()`, **no ping**. Use for AGM/STV
     occurrence messages.
+  - `send_dms(bot, config_path, make_message)` — DMs every non-bot member holding
+    the configured role, per guild, **skipping guilds with `dmEnabled == False`**.
+    Requires the Server Members privileged intent (`intents.members = True`, set in
+    every bot's `__init__`) so `role.members` is populated. Recipients with DMs
+    closed raise `discord.Forbidden` and are silently skipped. Mentions are inert in
+    DMs, so the body carries no role mention — pass the same plain-body `make_message`
+    used for the channel post. Fired **alongside** the channel delivery at each
+    trigger: STV (30-min warning + start), AGM (**10-min warning only**, spawn stays
+    DM-free), DMF (open), BG (go-live).
 - **Access control:** `require_dev_role()` gates a command to members holding a role
   **named "dev"** (`DEV_ROLE_NAME`), matched case-insensitively **by name, not ID**,
   so it is portable across servers. `install_dev_error_handler(tree)` turns a failed
@@ -66,18 +75,22 @@ logic is shared.
   by role name — that is why this is enforced at runtime.
 - **Logging:** `setup_logging(name)` redirects `stdout`/`stderr` into
   `logs/<name>.log`, rotating at 5 MB × 3 backups.
-- **Config I/O:** `load_config` / `save_guild_config`. Config lives in
-  `python-bots/data/<bot>-config.json`, keyed by guild id →
-  `{"channelId": "...", "roleId": "..."}`.
+- **Config I/O:** `load_config` / `save_guild_config` / `set_dm_enabled`. Config
+  lives in `python-bots/data/<bot>-config.json`, keyed by guild id →
+  `{"channelId": "...", "roleId": "...", "dmEnabled": true}`. `dmEnabled` is
+  **optional and defaults to ON** (`.get("dmEnabled", True)`); `save_guild_config`
+  preserves an existing `dmEnabled` across a re-`/setup`, and `set_dm_enabled(path,
+  guild_id, enabled)` flips it (returns `False` if that guild has no saved config).
 
 ### Per-bot file shape (all four are near-identical)
 
 1. Load the matching token env var, call `setup_logging`.
-2. Subclass `discord.Client`, build a `CommandTree`, `tree.sync()` in `setup_hook`,
-   start the 1-minute `tasks.loop`.
+2. Subclass `discord.Client` with `intents.members = True` (required for `send_dms`),
+   build a `CommandTree`, `tree.sync()` in `setup_hook`, start the 1-minute
+   `tasks.loop`.
 3. `install_dev_error_handler(bot.tree)` right after constructing the bot.
-4. `/setup<x>` (channel + role → saved config) and `/test<x>` commands, both
-   `@require_dev_role()`.
+4. `/setup<x>` (channel + role → saved config), `/test<x>`, and `/<x>dms`
+   (per-guild DM toggle) commands, all `@require_dev_role()`.
 5. `do_update()` runs every minute: swap avatar on state change → run ping logic →
    set presence status → set nickname (only when changed, tracked in
    `last_nicks`).
@@ -93,9 +106,13 @@ logic is shared.
 ### Test commands
 
 - `/teststv` and `/testagm` take a `warning: bool` arg: `warning:true` fires the
-  advance ping (via `send_pings`); `warning:false` fires the occurrence message
-  (via `send_broadcast`). This mirrors production exactly.
-- `/testbg` and `/testdmf` take **no** arg (single occurrence ping only).
+  advance ping (via `send_pings`) **and** DMs role holders; `warning:false` fires the
+  occurrence message (via `send_broadcast`). STV's occurrence branch also DMs; AGM's
+  spawn branch stays ping-free **and** DM-free. This mirrors production exactly.
+- `/testbg` and `/testdmf` take **no** arg (single occurrence ping + DM).
+- `/<x>dms enabled:<bool>` (one per bot: `/stvdms`, `/agmdms`, `/dmfdms`, `/bgdms`)
+  flips that guild's `dmEnabled` via `set_dm_enabled`; replies "No config yet — run
+  /setup<x> first." if the guild is unconfigured.
 
 ---
 

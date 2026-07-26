@@ -16,7 +16,8 @@ from dotenv import load_dotenv
 
 from shared import (
     format_countdown, find_image, save_guild_config,
-    get_stv_state, rank_prefix, send_pings, send_broadcast, setup_logging,
+    get_stv_state, rank_prefix, send_pings, send_broadcast, send_dms,
+    set_dm_enabled, setup_logging,
     require_dev_role, install_dev_error_handler,
 )
 
@@ -40,7 +41,9 @@ MSG_WARN30 = ("🎣 **STV Fishing Extravaganza** starts in 30 minutes! "
 
 class STVBot(discord.Client):
     def __init__(self):
-        super().__init__(intents=discord.Intents.default())
+        intents = discord.Intents.default()
+        intents.members = True   # needed to enumerate role.members for DM alerts
+        super().__init__(intents=intents)
         self.tree            = app_commands.CommandTree(self)
         self.last_avatar_key: str | None = None
         self.was_active:     bool | None = None
@@ -85,14 +88,32 @@ async def cmd_setup_stv(
 async def teststv(interaction: discord.Interaction, warning: bool = False):
     await interaction.response.defer(ephemeral=True)
     if warning:
-        # advance warning — pings the role (matches production)
+        # advance warning — pings the role + DMs role holders (matches production)
         await send_pings(bot, CONFIG_PATH, lambda: MSG_WARN30)
+        await send_dms(bot, CONFIG_PATH, lambda: MSG_WARN30)
         label = "30-min warning"
     else:
-        # start message — no ping (matches production)
+        # start message — no channel ping, but DM role holders (matches production)
         await send_broadcast(bot, CONFIG_PATH, lambda: MSG_START)
+        await send_dms(bot, CONFIG_PATH, lambda: MSG_START)
         label = "start message"
     await interaction.followup.send(f"✅ Test {label} sent.", ephemeral=True)
+
+
+@bot.tree.command(name="stvdms", description="Toggle DM alerts to role holders on/off for this server")
+@require_dev_role()
+@app_commands.describe(enabled="True to DM role holders on STV alerts, False to disable")
+async def stvdms(interaction: discord.Interaction, enabled: bool):
+    if not interaction.guild:
+        await interaction.response.send_message("Run this inside a server.", ephemeral=True)
+        return
+    if not set_dm_enabled(CONFIG_PATH, interaction.guild_id, enabled):
+        await interaction.response.send_message(
+            "No config yet — run /setupstv first.", ephemeral=True)
+        return
+    state = "ON" if enabled else "OFF"
+    await interaction.response.send_message(f"✅ STV DM alerts now **{state}**.", ephemeral=True)
+    print(f"[STV] DM alerts {state} for '{interaction.guild.name}'")
 
 
 @tasks.loop(minutes=1)
@@ -127,6 +148,7 @@ async def do_update():
     # 30-minute advance warning (pings the role) — re-arms once the window passes
     if not state["active"] and not bot.warned_30 and state["msUntilStart"] <= 30 * 60 * 1000:
         await send_pings(bot, CONFIG_PATH, lambda: MSG_WARN30)
+        await send_dms(bot, CONFIG_PATH, lambda: MSG_WARN30)
         bot.warned_30 = True
     elif state["msUntilStart"] > 30 * 60 * 1000:
         bot.warned_30 = False
@@ -136,6 +158,7 @@ async def do_update():
     # the AGM style (ping on advance, silent on the actual occurrence).
     if bot.was_active is False and state["active"]:
         await send_broadcast(bot, CONFIG_PATH, lambda: MSG_START)
+        await send_dms(bot, CONFIG_PATH, lambda: MSG_START)
     bot.was_active = state["active"]
 
     status = (

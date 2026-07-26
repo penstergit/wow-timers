@@ -17,7 +17,8 @@ from dotenv import load_dotenv
 
 from shared import (
     format_countdown, find_image, save_guild_config,
-    get_dmf_state, rank_prefix, send_pings, setup_logging,
+    get_dmf_state, rank_prefix, send_pings, send_dms, set_dm_enabled,
+    setup_logging,
     require_dev_role, install_dev_error_handler,
 )
 
@@ -33,10 +34,15 @@ SCRIPT_DIR  = Path(__file__).parent
 CONFIG_PATH = str(SCRIPT_DIR / "data" / "dmf-config.json")
 IMAGES_DIR  = SCRIPT_DIR / "images"
 
+MSG_OPEN = ("🎪 **Darkmoon Faire** is now open! "
+            "Head to Elwynn Forest, Mulgore, or Terokkar Forest.")
+
 
 class DMFBot(discord.Client):
     def __init__(self):
-        super().__init__(intents=discord.Intents.default())
+        intents = discord.Intents.default()
+        intents.members = True   # needed to enumerate role.members for DM alerts
+        super().__init__(intents=intents)
         self.tree            = app_commands.CommandTree(self)
         self.last_avatar_key: str | None = None
         self.was_active:     bool | None = None
@@ -78,11 +84,25 @@ async def cmd_setup_dmf(
 @require_dev_role()
 async def testdmf(interaction: discord.Interaction):
     await interaction.response.defer(ephemeral=True)
-    await send_pings(bot, CONFIG_PATH, lambda:
-        f"🎪 **Darkmoon Faire** is now open! "
-        "Head to Elwynn Forest, Mulgore, or Terokkar Forest."
-    )
+    await send_pings(bot, CONFIG_PATH, lambda: MSG_OPEN)
+    await send_dms(bot, CONFIG_PATH, lambda: MSG_OPEN)
     await interaction.followup.send("✅ Test ping sent.", ephemeral=True)
+
+
+@bot.tree.command(name="dmfdms", description="Toggle DM alerts to role holders on/off for this server")
+@require_dev_role()
+@app_commands.describe(enabled="True to DM role holders when the faire opens, False to disable")
+async def dmfdms(interaction: discord.Interaction, enabled: bool):
+    if not interaction.guild:
+        await interaction.response.send_message("Run this inside a server.", ephemeral=True)
+        return
+    if not set_dm_enabled(CONFIG_PATH, interaction.guild_id, enabled):
+        await interaction.response.send_message(
+            "No config yet — run /setupdmf first.", ephemeral=True)
+        return
+    state = "ON" if enabled else "OFF"
+    await interaction.response.send_message(f"✅ DMF DM alerts now **{state}**.", ephemeral=True)
+    print(f"[DMF] DM alerts {state} for '{interaction.guild.name}'")
 
 
 @tasks.loop(minutes=1)
@@ -115,12 +135,10 @@ async def do_update():
             print("[INFO] Place images/dmf.png (or dmf_active.png / dmf_inactive.png)")
         bot.last_avatar_key = key
 
-    # Role ping when faire opens
+    # Role ping + DM to role holders when faire opens
     if bot.was_active is False and state["active"]:
-        await send_pings(bot, CONFIG_PATH, lambda:
-            f"🎪 **Darkmoon Faire** is now open! "
-            "Head to Elwynn Forest, Mulgore, or Terokkar Forest."
-        )
+        await send_pings(bot, CONFIG_PATH, lambda: MSG_OPEN)
+        await send_dms(bot, CONFIG_PATH, lambda: MSG_OPEN)
     bot.was_active = state["active"]
 
     status = (

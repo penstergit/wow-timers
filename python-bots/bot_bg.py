@@ -17,7 +17,8 @@ from dotenv import load_dotenv
 
 from shared import (
     format_countdown, find_image, save_guild_config,
-    get_rotation_info, rank_prefix, send_pings, setup_logging,
+    get_rotation_info, rank_prefix, send_pings, send_dms, set_dm_enabled,
+    setup_logging,
     require_dev_role, install_dev_error_handler,
 )
 
@@ -40,7 +41,9 @@ BG_IMAGE_STEMS = {"AV": "av", "EOTS": "eots", "WSG": "wsg", "AB": "ab"}
 
 class BGBot(discord.Client):
     def __init__(self):
-        super().__init__(intents=discord.Intents.default())
+        intents = discord.Intents.default()
+        intents.members = True   # needed to enumerate role.members for DM alerts
+        super().__init__(intents=intents)
         self.tree         = app_commands.CommandTree(self)
         self.last_bg_nick: str | None = None          # tracks last avatar swap
         self.was_active:   bool | None = None
@@ -85,8 +88,26 @@ async def cmd_setup_bg(
 async def testbg(interaction: discord.Interaction):
     await interaction.response.defer(ephemeral=True)
     short = get_rotation_info()["currentBG"]["shortName"]
-    await send_pings(bot, CONFIG_PATH, lambda: f"🏟️ **{short} Weekend** is now live!")
+    make_msg = lambda: f"🏟️ **{short} Weekend** is now live!"
+    await send_pings(bot, CONFIG_PATH, make_msg)
+    await send_dms(bot, CONFIG_PATH, make_msg)
     await interaction.followup.send("✅ Test ping sent.", ephemeral=True)
+
+
+@bot.tree.command(name="bgdms", description="Toggle DM alerts to role holders on/off for this server")
+@require_dev_role()
+@app_commands.describe(enabled="True to DM role holders when the weekend goes live, False to disable")
+async def bgdms(interaction: discord.Interaction, enabled: bool):
+    if not interaction.guild:
+        await interaction.response.send_message("Run this inside a server.", ephemeral=True)
+        return
+    if not set_dm_enabled(CONFIG_PATH, interaction.guild_id, enabled):
+        await interaction.response.send_message(
+            "No config yet — run /setupbg first.", ephemeral=True)
+        return
+    state = "ON" if enabled else "OFF"
+    await interaction.response.send_message(f"✅ BG DM alerts now **{state}**.", ephemeral=True)
+    print(f"[BG] DM alerts {state} for '{interaction.guild.name}'")
 
 
 # ── Update loop ────────────────────────────────────────────────────────────
@@ -122,12 +143,14 @@ async def do_update():
             print(f"[INFO] No image found for {short} — place images/{stem}.png")
         bot.last_bg_nick = short
 
-    # Role ping when weekend goes live
+    # Role ping + DM to role holders when weekend goes live
     if bot.was_active is False and info["isActive"]:
-        await send_pings(bot, CONFIG_PATH, lambda:
+        make_live_msg = lambda: (
             f"🏟️ **{short} Weekend** is now live! "
             f"Active for {format_countdown(info['msUntilEnd'])}."
         )
+        await send_pings(bot, CONFIG_PATH, make_live_msg)
+        await send_dms(bot, CONFIG_PATH, make_live_msg)
     bot.was_active = info["isActive"]
 
     # Status

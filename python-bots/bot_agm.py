@@ -17,7 +17,8 @@ from dotenv import load_dotenv
 
 from shared import (
     format_countdown, find_image, save_guild_config,
-    get_agm_state, rank_prefix, send_pings, send_broadcast, setup_logging,
+    get_agm_state, rank_prefix, send_pings, send_broadcast, send_dms,
+    set_dm_enabled, setup_logging,
     require_dev_role, install_dev_error_handler,
 )
 
@@ -39,7 +40,9 @@ MSG_SPAWN  = "⚔️ **Arena Grand Master** chest has spawned! Grab it fast — 
 
 class AGMBot(discord.Client):
     def __init__(self):
-        super().__init__(intents=discord.Intents.default())
+        intents = discord.Intents.default()
+        intents.members = True   # needed to enumerate role.members for DM alerts
+        super().__init__(intents=intents)
         self.tree        = app_commands.CommandTree(self)
         self.avatar_set  = False
         self.was_up:    bool | None = None
@@ -103,9 +106,12 @@ async def do_update():
             except discord.HTTPException as e:
                 print(f"[WARN] Avatar update failed: {e}")
 
-    # 10-minute warning — the ONLY ping AGM sends
+    # 10-minute warning — the ONLY ping AGM sends. Also DMs role holders here only
+    # (heads-up only, ~8/day). The spawn message stays silent + DM-free to avoid a
+    # second notification; a spawn DM can be wired in later if mcg wants it.
     if not state["isUp"] and not bot.warned_next and state["msUntilNext"] <= 10 * 60 * 1000:
         await send_pings(bot, CONFIG_PATH, lambda: MSG_WARN10)
+        await send_dms(bot, CONFIG_PATH, lambda: MSG_WARN10)
         bot.warned_next = True
 
     # Chest just spawned: post the pickup notice (NO ping) and reset the latch.
@@ -141,13 +147,30 @@ async def do_update():
 async def testagm(interaction: discord.Interaction, warning: bool = False):
     await interaction.response.defer(ephemeral=True)
     if warning:
-        # advance warning — pings the role (matches production)
+        # advance warning — pings the role + DMs role holders (matches production)
         await send_pings(bot, CONFIG_PATH, lambda: MSG_WARN10)
+        await send_dms(bot, CONFIG_PATH, lambda: MSG_WARN10)
         label = "10-min warning"
     else:
-        # spawn message — no ping (matches production)
+        # spawn message — no ping, no DM (matches production)
         await send_broadcast(bot, CONFIG_PATH, lambda: MSG_SPAWN)
         label = "spawn message"
     await interaction.followup.send(f"✅ Test {label} sent.", ephemeral=True)
+
+
+@bot.tree.command(name="agmdms", description="Toggle DM alerts to role holders on/off for this server")
+@require_dev_role()
+@app_commands.describe(enabled="True to DM role holders on the AGM 10-min warning, False to disable")
+async def agmdms(interaction: discord.Interaction, enabled: bool):
+    if not interaction.guild:
+        await interaction.response.send_message("Run this inside a server.", ephemeral=True)
+        return
+    if not set_dm_enabled(CONFIG_PATH, interaction.guild_id, enabled):
+        await interaction.response.send_message(
+            "No config yet — run /setupagm first.", ephemeral=True)
+        return
+    state = "ON" if enabled else "OFF"
+    await interaction.response.send_message(f"✅ AGM DM alerts now **{state}**.", ephemeral=True)
+    print(f"[AGM] DM alerts {state} for '{interaction.guild.name}'")
 
 bot.run(TOKEN)

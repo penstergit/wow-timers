@@ -191,13 +191,67 @@ async def send_broadcast(bot: discord.Client, config_path: str, make_message: Ca
             print(f"[WARN] Broadcast failed for guild {gid}: {e}")
 
 
+async def send_dms(bot: discord.Client, config_path: str, make_message: Callable[[], str]) -> None:
+    """DM every non-bot member holding the configured role, per guild.
+
+    Skipped for a guild whose config has ``dmEnabled == False``. Requires the
+    Server Members privileged intent (``intents.members = True``) so that
+    ``role.members`` is populated. Mentions are inert in DMs, so the body carries
+    no role mention. Recipients with DMs closed (Forbidden) are silently skipped.
+    """
+    config = load_config(config_path)
+    for gid, cfg in config.items():
+        if not cfg.get("dmEnabled", True):
+            continue
+        try:
+            guild = bot.get_guild(int(gid))
+            if not guild:
+                continue
+            role = guild.get_role(int(cfg["roleId"]))
+            if not role:
+                continue
+            body = make_message()
+            sent = 0
+            for member in role.members:
+                if member.bot:
+                    continue
+                try:
+                    await member.send(body)
+                    sent += 1
+                except discord.Forbidden:
+                    pass  # recipient has DMs closed / blocks server DMs
+                except discord.HTTPException as e:
+                    print(f"[WARN] DM to {member} failed in guild {gid}: {e}")
+            print(f"[DM] Sent {sent} DM(s) to '{role.name}' holders in guild {gid}")
+        except Exception as e:
+            print(f"[WARN] DM batch failed for guild {gid}: {e}")
+
+
 def save_guild_config(path: str, guild_id: int | str,
                       channel_id: int | str, role_id: int | str) -> None:
     p = Path(path)
     p.parent.mkdir(parents=True, exist_ok=True)
     cfg = load_config(path)
-    cfg[str(guild_id)] = {"channelId": str(channel_id), "roleId": str(role_id)}
+    existing = cfg.get(str(guild_id), {})
+    entry = {"channelId": str(channel_id), "roleId": str(role_id)}
+    if "dmEnabled" in existing:            # preserve the DM toggle across re-setup
+        entry["dmEnabled"] = existing["dmEnabled"]
+    cfg[str(guild_id)] = entry
     p.write_text(json.dumps(cfg, indent=2))
+
+
+def set_dm_enabled(path: str, guild_id: int | str, enabled: bool) -> bool:
+    """Flip the per-guild DM toggle. Returns False if the guild has no saved config."""
+    p = Path(path)
+    cfg = load_config(path)
+    entry = cfg.get(str(guild_id))
+    if entry is None:
+        return False
+    entry["dmEnabled"] = enabled
+    cfg[str(guild_id)] = entry
+    p.parent.mkdir(parents=True, exist_ok=True)
+    p.write_text(json.dumps(cfg, indent=2))
+    return True
 
 
 # ── BG Weekend rotation ────────────────────────────────────────────────────
