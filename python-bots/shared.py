@@ -340,6 +340,39 @@ def _dmf_start(year: int, month: int) -> datetime:
     return monday.replace(minute=1)
 
 
+# Darkmoon Faire location rotation (TBC realm: 3-zone monthly cycle).
+#
+# PROVISIONAL ANCHOR — needs ONE in-game confirmation to be trusted. There is no
+# live game feed; the zone is pure anchor + modulo math, exactly like the BG
+# rotation (_BG_ANCHOR). The bot cannot observe which zone the faire is in — it
+# only knows *when* the window is open (clock math).
+#
+# Confirmed datapoint: the Feb 2026 faire was in Mulgore (community report on the
+# TBC Anniversary realm). The cycle *order* is a best estimate: the June 2026
+# compensation faire was in Terokkar, which — if it reflects June's intended zone
+# — implies Mulgore -> Terokkar -> Elwynn. Confirm the August faire in-game, then
+# correct DMF_LOCATIONS / _DMF_ANCHOR_* below if needed.
+DMF_LOCATIONS = [
+    {"name": "Mulgore",         "short": "Mulgore"},
+    {"name": "Terokkar Forest", "short": "Terokkar"},
+    {"name": "Elwynn Forest",   "short": "Elwynn"},
+]
+_DMF_ANCHOR_YEAR  = 2026
+_DMF_ANCHOR_MONTH = 2      # February 2026 ...
+_DMF_ANCHOR_INDEX = 0      # ... was Mulgore (index 0 in DMF_LOCATIONS)
+
+
+def get_dmf_location(year: int, month: int) -> dict:
+    """Best-estimate DMF zone dict for a calendar month (see DMF_LOCATIONS note).
+
+    Deterministic anchor + modulo. Returns the same shape as BATTLEGROUNDS
+    entries: {"name", "short"}.
+    """
+    months_elapsed = (year - _DMF_ANCHOR_YEAR) * 12 + (month - _DMF_ANCHOR_MONTH)
+    idx = (_DMF_ANCHOR_INDEX + months_elapsed) % len(DMF_LOCATIONS)
+    return DMF_LOCATIONS[idx]
+
+
 def get_dmf_state(now: datetime | None = None) -> dict:
     if now is None:
         now = datetime.now(timezone.utc)
@@ -357,15 +390,18 @@ def get_dmf_state(now: datetime | None = None) -> dict:
         s_ms  = int(start.astimezone(timezone.utc).timestamp() * 1000)
         e_ms  = int(end.astimezone(timezone.utc).timestamp() * 1000)
         if s_ms <= now_ms < e_ms:
-            return {"active": True,  "msUntilEnd": e_ms - now_ms, "msUntilStart": 0}
+            return {"active": True,  "msUntilEnd": e_ms - now_ms, "msUntilStart": 0,
+                    "location": get_dmf_location(y, m)}
         if now_ms < s_ms:
-            return {"active": False, "msUntilStart": s_ms - now_ms, "msUntilEnd": 0}
+            return {"active": False, "msUntilStart": s_ms - now_ms, "msUntilEnd": 0,
+                    "location": get_dmf_location(y, m)}
 
     # Fallback to month after next
     y2, m2 = (mt.year + 1, 2) if mt.month == 11 else (
               (mt.year + 1, 1) if mt.month == 12 else (mt.year, mt.month + 2))
     s_ms = int(_dmf_start(y2, m2).astimezone(timezone.utc).timestamp() * 1000)
-    return {"active": False, "msUntilStart": s_ms - now_ms, "msUntilEnd": 0}
+    return {"active": False, "msUntilStart": s_ms - now_ms, "msUntilEnd": 0,
+            "location": get_dmf_location(y2, m2)}
 
 
 # ── STV Fishing Extravaganza ───────────────────────────────────────────────

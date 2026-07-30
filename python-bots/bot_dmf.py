@@ -34,8 +34,13 @@ SCRIPT_DIR  = Path(__file__).parent
 CONFIG_PATH = str(SCRIPT_DIR / "data" / "dmf-config.json")
 IMAGES_DIR  = SCRIPT_DIR / "images"
 
-MSG_OPEN = ("🎪 **Darkmoon Faire** is now open! "
-            "Head to Elwynn Forest, Mulgore, or Terokkar Forest.")
+def make_open_msg(loc: dict) -> str:
+    """Occurrence message naming the specific zone for this month's faire.
+
+    ``loc`` is a DMF_LOCATIONS entry ({"name", "short"}) from get_dmf_state.
+    """
+    return (f"🎪 **Darkmoon Faire** is now open in **{loc['name']}** for the week! "
+            f"Head over and grab your buffs before your next PvP session.")
 
 
 class DMFBot(discord.Client):
@@ -84,8 +89,9 @@ async def cmd_setup_dmf(
 @require_dev_role()
 async def testdmf(interaction: discord.Interaction):
     await interaction.response.defer(ephemeral=True)
-    await send_pings(bot, CONFIG_PATH, lambda: MSG_OPEN)
-    await send_dms(bot, CONFIG_PATH, lambda: MSG_OPEN)
+    loc = get_dmf_state(datetime.now(timezone.utc))["location"]
+    await send_pings(bot, CONFIG_PATH, lambda: make_open_msg(loc))
+    await send_dms(bot, CONFIG_PATH, lambda: make_open_msg(loc))
     await interaction.followup.send("✅ Test ping sent.", ephemeral=True)
 
 
@@ -137,8 +143,8 @@ async def do_update():
 
     # Role ping + DM to role holders when faire opens
     if bot.was_active is False and state["active"]:
-        await send_pings(bot, CONFIG_PATH, lambda: MSG_OPEN)
-        await send_dms(bot, CONFIG_PATH, lambda: MSG_OPEN)
+        await send_pings(bot, CONFIG_PATH, lambda: make_open_msg(state["location"]))
+        await send_dms(bot, CONFIG_PATH, lambda: make_open_msg(state["location"]))
     bot.was_active = state["active"]
 
     status = (
@@ -152,7 +158,7 @@ async def do_update():
     print(f"[DMF] Status: {status}")
 
     symbol = rank_prefix("dmf", now)
-    nick   = f"{symbol} DMF Week" if state["active"] else f"{symbol} DMF Week"
+    nick   = f"{symbol} DMF {state['location']['short']}"
     for guild in bot.guilds:
         if bot.last_nicks.get(guild.id) == nick:
             continue

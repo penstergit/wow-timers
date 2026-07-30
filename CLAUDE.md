@@ -196,8 +196,11 @@ bot must be **restarted** for the new signature to sync into the picker.
 4. **`start.sh` / `stop.sh` / `start-when-online.sh` assume a Linux `.venv/`** and PID
    files. They do **not** apply to this Windows host — use `start_bots.bat` +
    Anaconda python here.
-5. **DMF nickname line is a no-op ternary** (`... if state["active"] else ...` with
-   both branches equal to `④ DMF Week`). Harmless; leave unless asked.
+5. **DMF nickname shows the rotating zone** (`④ DMF Mulgore` / `Elwynn` / `Terokkar`)
+   via `state["location"]`, replacing the old `DMF Week` no-op ternary. The zone is a
+   deterministic anchor+modulo (`get_dmf_location` in `shared.py`), **provisional**
+   until `_DMF_ANCHOR_*` / `DMF_LOCATIONS` are confirmed against a real faire — there
+   is **no live game feed**, the bot only knows *when* the window is open, not *where*.
 6. Token env var naming is inconsistent (BG uses the bare `DISCORD_BOT_TOKEN`).
 
 If you make a behavior change that a stale doc line describes, update that doc line
